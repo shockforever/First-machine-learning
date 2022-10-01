@@ -1,0 +1,118 @@
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.colors import ListedColormap
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import datasets
+from sklearn.datasets import make_moons, make_circles, make_classification
+from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import make_pipeline
+
+from sklearn.decomposition import PCA
+from sklearn.neighbors import KNeighborsClassifier
+h=0.02
+alphas = np.logspace(-1, 1, 5)
+
+classifiers = []
+names = []
+for alpha in alphas:
+    classifiers.append(
+        make_pipeline(
+            StandardScaler(),
+            MLPClassifier(
+                solver="lbfgs",
+                alpha=alpha,
+                random_state=0,
+                max_iter=10000,
+                early_stopping=True,
+                hidden_layer_sizes=[10, 10],
+            ),
+        )
+    )
+    names.append(f"alpha {alpha:.2f}")
+
+X, y = make_classification(
+    n_features=2, n_redundant=0, n_informative=2, random_state=0, n_clusters_per_class=1
+)
+
+#X, y = datasets.load_digits(return_X_y=True)
+
+# Split into train/test
+
+
+rng = np.random.RandomState(2)
+X += 2 * rng.uniform(size=X.shape)
+linearly_separable = (X, y)
+
+
+datasets = [
+    make_moons(noise=0.3, random_state=0),
+    make_circles(noise=0.2, factor=0.5, random_state=1),
+    linearly_separable,
+]
+
+plt.figure(figsize=(50, 25))
+
+i = 1
+# iterate over datasets
+for X, y in datasets:
+    # split into training and test part
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.4, random_state=42
+    )
+    '''X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.5, stratify=y, random_state=0
+    )'''
+
+    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
+    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+    # just plot the dataset first
+    cm = plt.cm.RdBu
+    cm_bright = ListedColormap(["#FF0000", "#0000FF"])
+    ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
+    # Plot the training points
+    ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright)
+    # and testing points
+    ax.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.6)
+    ax.set_xlim(xx.min(), xx.max())
+    ax.set_ylim(yy.min(), yy.max())
+    ax.set_xticks(())
+    ax.set_yticks(())
+plt.title( "MLP h : %f" % h)
+plt.show()
+#----------------------------------------------------------
+n_neighbors = 3
+random_state = 0
+
+# Load Digits dataset
+#X, y = datasets.load_digits(return_X_y=True)
+X, y = make_classification(
+    n_features=2, n_redundant=0, n_informative=2, random_state=0, n_clusters_per_class=1
+)
+
+
+# Split into train/test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.5, stratify=y, random_state=random_state
+)
+'''X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.4, random_state=42
+)'''
+
+
+# Reduce dimension to 2 with PCA
+pca = make_pipeline(StandardScaler(), PCA(n_components=2, random_state=random_state))
+
+# Use a nearest neighbor classifier to evaluate the methods
+knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+
+plt.figure()
+pca.fit(X_train, y_train)
+knn.fit(pca.transform(X_train), y_train)
+acc_knn = knn.score(pca.transform(X_test), y_test)
+X_embedded = pca.transform(X)
+plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=y, s=30, cmap="Set1")
+plt.title( "KNN n_neighbors : %d" % n_neighbors)
+plt.show()
