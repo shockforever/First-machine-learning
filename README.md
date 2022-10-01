@@ -1,3 +1,2 @@
 # First-machine-learning
-First machine learning
-please open colab .
+please open colab 
